@@ -78,8 +78,7 @@ class EventErrors extends React.Component<Props, State> {
       }
     }
 
-    const query = pathNames.join(',');
-    this.fetchReleaseArtifacts(query);
+    this.fetchReleaseArtifacts(pathNames);
   }
 
   getURLPathname(url: string) {
@@ -91,7 +90,7 @@ class EventErrors extends React.Component<Props, State> {
     }
   }
 
-  async fetchReleaseArtifacts(query: string) {
+  async fetchReleaseArtifacts(query: Array<string>) {
     const {api, orgSlug, event, projectSlug} = this.props;
     const {release} = event;
     const releaseVersion = release?.version;
