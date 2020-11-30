@@ -70,7 +70,11 @@ class EventErrors extends React.Component<Props, State> {
     for (const sourceCodeError of sourceCodeErrors) {
       const url = sourceCodeError.data.url;
       if (url) {
-        pathNames.push(encodeURIComponent(new URL(url).pathname));
+        const pathName = this.getURLPathname(url);
+
+        if (pathName) {
+          pathNames.push(encodeURIComponent(pathName));
+        }
       }
     }
 
@@ -78,12 +82,21 @@ class EventErrors extends React.Component<Props, State> {
     this.fetchReleaseArtifacts(query);
   }
 
+  getURLPathname(url: string) {
+    try {
+      return new URL(url).pathname;
+    } catch (error) {
+      Sentry.captureException(error);
+      return undefined;
+    }
+  }
+
   async fetchReleaseArtifacts(query: string) {
     const {api, orgSlug, event, projectSlug} = this.props;
     const {release} = event;
     const releaseVersion = release?.version;
 
-    if (!releaseVersion) {
+    if (!releaseVersion || !query) {
       return;
     }
 
@@ -147,9 +160,13 @@ class EventErrors extends React.Component<Props, State> {
                 error.data.url &&
                 !!releaseArtifacts?.length
               ) {
-                const releaseArtifact = releaseArtifacts.find(releaseArt =>
-                  releaseArt.name.includes(new URL(error.data.url).pathname)
-                );
+                const releaseArtifact = releaseArtifacts.find(releaseArt => {
+                  const pathname = this.getURLPathname(error.data.url);
+                  if (pathname) {
+                    return releaseArt.name.includes(pathname);
+                  }
+                  return false;
+                });
 
                 if (releaseArtifact && !releaseArtifact.dist) {
                   error.message = t(
