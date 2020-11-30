@@ -4,8 +4,6 @@ import re
 import logging
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.utils import six
-from sentry.utils.compat import filter
 from rest_framework.response import Response
 
 from sentry.api.bases.project import ProjectEndpoint, ProjectReleasePermission
