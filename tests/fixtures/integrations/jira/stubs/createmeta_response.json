@@ -65,6 +65,35 @@
               "name": "Labels",
               "key": "labels"
             },
+            "project": {
+              "allowedValues": [
+               {
+                "avatarUrls": {
+                  "48x48": "http://www.example.com/jira/secure/projectavatar?pid=10000&avatarId=10011",
+                  "24x24": "http://www.example.com/jira/secure/projectavatar?size=small&pid=10000&avatarId=10011",
+                  "16x16": "http://www.example.com/jira/secure/projectavatar?size=xsmall&pid=10000&avatarId=10011",
+                  "32x32": "http://www.example.com/jira/secure/projectavatar?size=medium&pid=10000&avatarId=10011"
+                },
+                "id": "10000",
+                "key": "EX",
+                "name": "Example Project",
+                "projectTypeKey": "software",
+                "self": "https://hellboi.atlassian.net/rest/api/2/project/10000",
+                "simplified": false
+               }
+              ],
+              "hasDefaultValue": false,
+              "key": "project",
+              "name": "Project",
+              "operations": [
+               "set"
+              ],
+              "required": true,
+              "schema": {
+               "system": "project",
+               "type": "project"
+              }
+            },
             "customfield_10200": {
               "operations": ["set"],
               "required": false,

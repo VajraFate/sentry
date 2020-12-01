@@ -118,7 +118,12 @@ class JiraCreateTicketAction(TicketEventAction):
     @transaction_start("JiraCreateTicketAction.after")
     def after(self, event, state):
         organization = self.project.organization
-        integration = self.get_integration()
+        try:
+            integration = self.get_integration()
+        except Integration.DoesNotExist:
+            # Integration removed, rule still active.
+            return
+
         installation = integration.get_installation(organization.id)
 
         self.data["title"] = event.title
@@ -135,10 +140,8 @@ class JiraCreateTicketAction(TicketEventAction):
             if self.data.get("dynamic_form_fields"):
                 del self.data["dynamic_form_fields"]
 
-            if not self.has_linked_issue(event, integration):
-                resp = installation.create_issue(self.data)
-                self.create_link(resp["key"], integration, installation, event)
-            else:
+            # TODO MARCOS FIRST return this value?
+            if self.has_linked_issue(event, integration):
                 logger.info(
                     "jira.rule_trigger.link_already_exists",
                     extra={
@@ -147,7 +150,12 @@ class JiraCreateTicketAction(TicketEventAction):
                         "group_id": event.group.id,
                     },
                 )
-            return
+                return
+
+            response = installation.create_issue(self.data)
+            ticket_key = response.get("key")
+            self.create_link(ticket_key, integration, installation, event)
+            return ticket_key
 
         key = u"jira:{}".format(integration.id)
         yield self.future(create_issue, key=key)

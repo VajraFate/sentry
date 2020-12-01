@@ -41,7 +41,7 @@ class JiraTicketRulesTestCase(RuleTestCase, BaseAPITestCase):
         self.login_as(user=self.user)
 
     def test_ticket_rules(self):
-        with mock.patch.object(self.installation, "get_client", self.get_client):
+        with mock.patch("sentry.integrations.jira.integration.JiraIntegration.get_client", self.get_client):
             # Create a new Rule
             response = self.client.post(
                 reverse(
@@ -60,14 +60,11 @@ class JiraTicketRulesTestCase(RuleTestCase, BaseAPITestCase):
                     "actions": [
                         {
                             "id": "sentry.integrations.jira.notify_action.JiraCreateTicketAction",
+                            "issuetype": "1",
+                            "jira_integration": self.integration.id,
                             "name": "Create a Jira ticket in the Jira Cloud account",
-                            "issueType": "1",
-                        },
-                        {
-                            "id": "sentry.integrations.jira.notify_action.JiraCreateTicketAction",
-                            "name": "SECOND ACTION",
-                            "issuetype": "2",
-                        },
+                            "project": "10000",
+                        }
                     ],
                     "conditions": [],
                 },
@@ -76,30 +73,29 @@ class JiraTicketRulesTestCase(RuleTestCase, BaseAPITestCase):
 
             # Get the rule from DB
             rule_object = Rule.objects.get(id=response.data["id"])
-            rule = self.get_rule(data=response.data, rule=rule_object)
-
             event = self.get_event()
 
-            # Trigger it's `after`
-            results = list(rule.after(event=event, state=self.get_state()))
-            assert len(results) == 1
+            def trigger(rule_object):
+                action = rule_object.data.get("actions", ())[0]
+                action_inst = self.get_rule(data=action, rule=rule_object)
+                results = list(action_inst.after(event=event, state=self.get_state()))
+                assert len(results) == 1
 
-            x = results[0].callback(event, futures=[])
-            print("-------------------------------------")
-            print("results", x)
-            print("-------------------------------------")
+                return results[0].callback(event, futures=[])
+
+            # Trigger its `after`
+            key = trigger(rule_object)
 
             # assert ticket created in DB
-            assert len(ExternalIssue.objects.filter(key="APP-123")) == 1
+            external_issue_count = len(ExternalIssue.objects.filter(key=key))
+            assert external_issue_count == 1
 
             # assert ticket created on jira
-            id = ""
-            self.get_client().get_issue(id)
+            assert self.mock_jira._get_data("10000", key) is not None
 
-            rule.after(event=self.event, state=self.get_state()).callback()
-            assert len(results) == 1
+            # Trigger its `after` _again_
+            key = trigger(rule_object)
 
             # assert new ticket NOT created in DB
-            assert len(ExternalIssue.objects.filter(key="APP-123")) == 1
-
-            # assert ticket NOT created on jira
+            assert key is None
+            assert ExternalIssue.objects.count() == external_issue_count

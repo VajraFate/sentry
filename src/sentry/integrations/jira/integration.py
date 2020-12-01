@@ -684,6 +684,14 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
         return fields
 
     def create_issue(self, data, **kwargs):
+        """
+        Data is a RuleBase.
+
+        :param data: object
+
+        :param kwargs:
+        :return:
+        """
         client = self.get_client()
         cleaned_data = {}
         # protect against mis-configured integration submitting a form without an
@@ -770,7 +778,7 @@ class JiraIntegration(IntegrationInstallation, IssueSyncMixin):
         try:
             response = client.create_issue(cleaned_data)
         except Exception as e:
-            self.raise_error(e)
+            return self.raise_error(e)
 
         issue_key = response.get("key")
         if not issue_key:
